@@ -1,0 +1,1036 @@
+<title>Wolf Warmtepomp</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+
+<style>
+/* ── Design tokens ─────────────────────────────────────────────────────────── */
+:root {
+  /* Surfaces */
+  --bg:        #f0f4f8;
+  --surface:   #ffffff;
+  --surface-2: #f7f9fc;
+  --border:    #e2e8f0;
+
+  /* Brand */
+  --accent:    #1d5fa8;
+  --accent-2:  #2a78d6;
+  --accent-bg: #dbeafe;
+
+  /* Text */
+  --fg:        #0f172a;
+  --fg-2:      #475569;
+  --fg-muted:  #94a3b8;
+
+  /* Series (validated categorical palette) */
+  --s1: #2a78d6;  /* blauw  — kamer */
+  --s2: #eb6834;  /* oranje — buiten */
+  --s3: #1baf7a;  /* groen  — aanvoer */
+  --s4: #6250d6;  /* violet — retour */
+  --s5: #e87ba4;  /* roze   — warmwater */
+  --s6: #eda100;  /* geel   — gemiddelde lijn */
+  --s7: #008300;  /* donkergroen */
+  --s8: #e34948;  /* rood */
+
+  /* Grid */
+  --grid: #e8ecf2;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:        #0d1117;
+    --surface:   #161b22;
+    --surface-2: #1c2330;
+    --border:    #30363d;
+    --accent:    #3987e5;
+    --accent-2:  #58a6ff;
+    --accent-bg: #0d2144;
+    --fg:        #f0efec;
+    --fg-2:      #c3c2b7;
+    --fg-muted:  #6e7681;
+    --s1: #3987e5;
+    --s2: #d95926;
+    --s3: #199e70;
+    --s4: #9085e9;
+    --s5: #d55181;
+    --s6: #c98500;
+    --s7: #008300;
+    --s8: #e66767;
+    --grid: #21262d;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:        #0d1117;
+  --surface:   #161b22;
+  --surface-2: #1c2330;
+  --border:    #30363d;
+  --accent:    #3987e5;
+  --accent-2:  #58a6ff;
+  --accent-bg: #0d2144;
+  --fg:        #f0efec;
+  --fg-2:      #c3c2b7;
+  --fg-muted:  #6e7681;
+  --s1: #3987e5;
+  --s2: #d95926;
+  --s3: #199e70;
+  --s4: #9085e9;
+  --s5: #d55181;
+  --s6: #c98500;
+  --s7: #008300;
+  --s8: #e66767;
+  --grid: #21262d;
+  color-scheme: dark;
+}
+
+/* ── Reset & base ──────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0;
+  min-height: 100%;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ── Header ────────────────────────────────────────────────────────────────── */
+.header {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 20;
+  background: var(--accent);
+  color: #fff;
+  padding: 12px 0;
+  margin-left: max(-16px, calc(-1 * env(safe-area-inset-left, 16px)));
+  margin-right: max(-16px, calc(-1 * env(safe-area-inset-right, 16px)));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px);
+  z-index: 21;
+  background: var(--accent);
+}
+
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.header h1 {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.header-sub {
+  font-size: 11px;
+  opacity: 0.75;
+  margin-top: 1px;
+}
+
+.refresh-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: #fff;
+  padding: 7px 13px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+  font-family: inherit;
+}
+.refresh-btn:hover { background: rgba(255,255,255,0.28); }
+.refresh-btn:active { background: rgba(255,255,255,0.1); }
+.refresh-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+.refresh-btn.spinning svg { animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Page body ─────────────────────────────────────────────────────────────── */
+.page {
+  padding-block: 16px;
+  max-width: 900px;
+}
+
+/* ── Periode balk ──────────────────────────────────────────────────────────── */
+.periode-bar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--fg-2);
+  margin-bottom: 14px;
+}
+.periode-bar strong { color: var(--fg); font-size: 13px; }
+.dot { width: 6px; height: 6px; background: var(--s7); border-radius: 50%; flex-shrink: 0; }
+
+/* ── KPI tegels ────────────────────────────────────────────────────────────── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+@media (min-width: 600px) { .kpi-grid { grid-template-columns: repeat(4, 1fr); } }
+
+.kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 14px 12px;
+  position: relative;
+  overflow: hidden;
+}
+.kpi::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--kpi-color, var(--accent));
+  border-radius: 12px 12px 0 0;
+}
+.kpi-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-muted);
+  margin-bottom: 6px;
+}
+.kpi-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--kpi-color, var(--fg));
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.kpi-sub {
+  font-size: 10px;
+  color: var(--fg-muted);
+  margin-top: 4px;
+}
+
+/* ── Tab nav ───────────────────────────────────────────────────────────────── */
+.tab-nav {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-bottom: 14px;
+  padding-bottom: 2px;
+}
+.tab-nav::-webkit-scrollbar { display: none; }
+
+.tab-btn {
+  flex-shrink: 0;
+  padding: 7px 13px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--fg-2);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.tab-btn.active {
+  background: var(--accent-bg);
+  border-color: var(--accent-2);
+  color: var(--accent-2);
+  font-weight: 600;
+}
+.tab-btn:hover:not(.active) { background: var(--surface-2); }
+
+/* ── Chart card ────────────────────────────────────────────────────────────── */
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.chart-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chart-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.chart-meta {
+  font-size: 11px;
+  color: var(--fg-muted);
+}
+
+/* ── Legenda ───────────────────────────────────────────────────────────────── */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin-bottom: 12px;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--fg-2);
+  cursor: pointer;
+  user-select: none;
+}
+.legend-item.hidden-series { opacity: 0.35; }
+.legend-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.legend-line {
+  width: 16px; height: 2px;
+  flex-shrink: 0;
+  border-radius: 2px;
+}
+
+/* ── SVG chart ─────────────────────────────────────────────────────────────── */
+.chart-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+svg.chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.grid-line { stroke: var(--grid); stroke-width: 1; }
+.axis-line { stroke: var(--border); stroke-width: 1; }
+.axis-label { font-family: 'Inter', system-ui, sans-serif; fill: var(--fg-muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+.tick-line  { stroke: var(--border); stroke-width: 1; }
+.chart-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart-dot  { stroke: var(--surface); stroke-width: 2; }
+.chart-bar  { opacity: 0.85; }
+.avg-line   { stroke-dasharray: 5 4; }
+
+/* ── Tooltip ───────────────────────────────────────────────────────────────── */
+.tooltip {
+  position: fixed;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 100;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  min-width: 140px;
+  max-width: 200px;
+}
+.tooltip-date {
+  font-weight: 600;
+  color: var(--fg);
+  margin-bottom: 6px;
+  font-size: 11px;
+}
+.tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+  color: var(--fg-2);
+}
+.tooltip-row:last-child { margin-bottom: 0; }
+.tooltip-swatch {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.tooltip-val { margin-left: auto; font-weight: 600; color: var(--fg); font-variant-numeric: tabular-nums; }
+.crosshair { stroke: var(--fg-muted); stroke-width: 1; stroke-dasharray: 3 3; pointer-events: none; }
+
+/* ── Data tabel ────────────────────────────────────────────────────────────── */
+.data-table-wrap {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+th {
+  background: var(--surface-2);
+  padding: 9px 12px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--fg-muted);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--grid);
+  color: var(--fg-2);
+  white-space: nowrap;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--surface-2); }
+.cop-good { color: var(--s7); font-weight: 600; }
+.cop-ok   { color: var(--accent-2); font-weight: 600; }
+.cop-low  { color: var(--s8); font-weight: 600; }
+
+/* ── Lege staat ────────────────────────────────────────────────────────────── */
+.empty { text-align: center; padding: 40px 20px; color: var(--fg-muted); font-size: 13px; }
+
+/* ── Section nav ───────────────────────────────────────────────────────────── */
+.section-panel { display: none; }
+.section-panel.active { display: block; }
+</style>
+
+<!-- ── INLINE DATA ─────────────────────────────────────────────────────────── -->
+<script>
+const RAW_DATA = [{"datum":"06-03-2026","tijd":"08:08","kamer":22.4,"buiten":6.6,"aanvoer":29.9,"retour":26.1,"boiler":29.7,"warmwater":50.4,"debiet":12.9,"druk":2.16,"comp_pct":15,"el_verm":0.5,"th_verm":3.6,"e_verw":49357,"e_ww":10819,"uren_comp":10352,"uren_elek":108,"cop":7.2},{"datum":"06-03-2026","tijd":"08:16","kamer":22.4,"buiten":6.8,"aanvoer":30,"retour":26.1,"boiler":30,"warmwater":50.3,"debiet":13.2,"druk":2.16,"comp_pct":15,"el_verm":0.5,"th_verm":3.8,"e_verw":49357,"e_ww":10819,"uren_comp":10352,"uren_elek":108,"cop":7.6},{"datum":"06-03-2026","tijd":"11:25","kamer":22.9,"buiten":13.5,"aanvoer":31,"retour":27,"boiler":31.1,"warmwater":49.8,"debiet":12.9,"druk":2.16,"comp_pct":15,"el_verm":0.4,"th_verm":4,"e_verw":49357,"e_ww":10819,"uren_comp":10355,"uren_elek":108,"cop":10.0},{"datum":"08-03-2026","tijd":"17:16","kamer":22.7,"buiten":11.3,"aanvoer":43.5,"retour":26,"boiler":43.6,"warmwater":51.8,"debiet":0,"druk":2.1,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":49463,"e_ww":10836,"uren_comp":10387,"uren_elek":108,"cop":null},{"datum":"09-03-2026","tijd":"16:35","kamer":23.3,"buiten":10.3,"aanvoer":27.2,"retour":23.5,"boiler":27.2,"warmwater":46.5,"debiet":0,"druk":2.09,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":49532,"e_ww":10847,"uren_comp":10405,"uren_elek":108,"cop":null},{"datum":"09-03-2026","tijd":"20:06","kamer":22.8,"buiten":6.1,"aanvoer":60.3,"retour":29.5,"boiler":60.3,"warmwater":66.4,"debiet":0,"druk":2.13,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":49532,"e_ww":10847,"uren_comp":10406,"uren_elek":109,"cop":null},{"datum":"09-03-2026","tijd":"20:08","kamer":22.8,"buiten":6.1,"aanvoer":60,"retour":29.6,"boiler":59.8,"warmwater":66.4,"debiet":0,"druk":2.13,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":49532,"e_ww":10847,"uren_comp":10406,"uren_elek":109,"cop":null},{"datum":"10-03-2026","tijd":"07:27","kamer":22.1,"buiten":5.4,"aanvoer":32.1,"retour":27.9,"boiler":32.1,"warmwater":62.9,"debiet":13,"druk":2.19,"comp_pct":26,"el_verm":0.6,"th_verm":4,"e_verw":49595,"e_ww":10860,"uren_comp":10414,"uren_elek":109,"cop":6.67},{"datum":"11-03-2026","tijd":"12:30","kamer":23.1,"buiten":10.1,"aanvoer":27.5,"retour":21.7,"boiler":27.4,"warmwater":48,"debiet":0,"druk":2.1,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":49660,"e_ww":10867,"uren_comp":10434,"uren_elek":109,"cop":null},{"datum":"11-03-2026","tijd":"21:48","kamer":22.7,"buiten":6.6,"aanvoer":29.1,"retour":25.2,"boiler":29.1,"warmwater":50.8,"debiet":13.5,"druk":2.17,"comp_pct":15,"el_verm":0.5,"th_verm":3.8,"e_verw":49660,"e_ww":10867,"uren_comp":10436,"uren_elek":109,"cop":7.6},{"datum":"12-03-2026","tijd":"08:45","kamer":22.6,"buiten":8,"aanvoer":30.9,"retour":26.9,"boiler":31,"warmwater":48.5,"debiet":13,"druk":2.15,"comp_pct":15,"el_verm":0.5,"th_verm":3.9,"e_verw":49717,"e_ww":10875,"uren_comp":10447,"uren_elek":109,"cop":7.8},{"datum":"13-03-2026","tijd":"08:23","kamer":22.7,"buiten":6.9,"aanvoer":30.9,"retour":27,"boiler":30.9,"warmwater":49.1,"debiet":13.1,"druk":2.17,"comp_pct":15,"el_verm":0.5,"th_verm":3.9,"e_verw":49768,"e_ww":10882,"uren_comp":10461,"uren_elek":109,"cop":7.8},{"datum":"15-03-2026","tijd":"14:46","kamer":23.9,"buiten":11.2,"aanvoer":48.1,"retour":44.6,"boiler":48.5,"warmwater":43.2,"debiet":28.1,"druk":2.13,"comp_pct":59,"el_verm":2.2,"th_verm":8.7,"e_verw":49908,"e_ww":10901,"uren_comp":10499,"uren_elek":109,"cop":3.95},{"datum":"16-03-2026","tijd":"08:46","kamer":22.4,"buiten":7.1,"aanvoer":30.7,"retour":26.8,"boiler":30.7,"warmwater":46.4,"debiet":13.4,"druk":2.15,"comp_pct":15,"el_verm":0.5,"th_verm":3.7,"e_verw":49964,"e_ww":10909,"uren_comp":10510,"uren_elek":109,"cop":7.4},{"datum":"17-03-2026","tijd":"10:40","kamer":22.7,"buiten":10.8,"aanvoer":31.5,"retour":27.4,"boiler":31.4,"warmwater":61.8,"debiet":12.8,"druk":2.19,"comp_pct":15,"el_verm":0.5,"th_verm":4.1,"e_verw":50017,"e_ww":10925,"uren_comp":10527,"uren_elek":109,"cop":8.2},{"datum":"18-03-2026","tijd":"10:14","kamer":22.8,"buiten":11.7,"aanvoer":29.7,"retour":26.9,"boiler":29.8,"warmwater":51.3,"debiet":15.8,"druk":2.17,"comp_pct":15,"el_verm":0.4,"th_verm":3.9,"e_verw":50067,"e_ww":10925,"uren_comp":10539,"uren_elek":109,"cop":9.75},{"datum":"19-03-2026","tijd":"09:02","kamer":22.6,"buiten":6.7,"aanvoer":31.8,"retour":27.7,"boiler":31.8,"warmwater":49.4,"debiet":13.3,"druk":2.15,"comp_pct":15,"el_verm":0.5,"th_verm":4,"e_verw":50113,"e_ww":10936,"uren_comp":10551,"uren_elek":109,"cop":8.0},{"datum":"20-03-2026","tijd":"07:17","kamer":22.3,"buiten":5,"aanvoer":29.8,"retour":25.5,"boiler":29.7,"warmwater":49.6,"debiet":16.2,"druk":2.15,"comp_pct":25,"el_verm":0.6,"th_verm":4.3,"e_verw":50156,"e_ww":10942,"uren_comp":10559,"uren_elek":109,"cop":7.17},{"datum":"22-03-2026","tijd":"09:49","kamer":22.6,"buiten":8.1,"aanvoer":31.2,"retour":27.1,"boiler":31.2,"warmwater":50.7,"debiet":13.8,"druk":2.16,"comp_pct":15,"el_verm":0.5,"th_verm":4.1,"e_verw":50271,"e_ww":10959,"uren_comp":10589,"uren_elek":109,"cop":8.2},{"datum":"23-03-2026","tijd":"07:59","kamer":22.5,"buiten":5.7,"aanvoer":30.8,"retour":26.9,"boiler":30.9,"warmwater":49.8,"debiet":12.9,"druk":2.16,"comp_pct":15,"el_verm":0.5,"th_verm":4.1,"e_verw":50320,"e_ww":10974,"uren_comp":10599,"uren_elek":109,"cop":8.2},{"datum":"26-03-2026","tijd":"07:46","kamer":22.1,"buiten":2.4,"aanvoer":32.4,"retour":27.3,"boiler":32.5,"warmwater":50.8,"debiet":22.8,"druk":2.21,"comp_pct":59,"el_verm":1.6,"th_verm":8.6,"e_verw":50475,"e_ww":10999,"uren_comp":10640,"uren_elek":109,"cop":5.37},{"datum":"27-03-2026","tijd":"07:34","kamer":22.4,"buiten":2.6,"aanvoer":33.8,"retour":29.1,"boiler":33.7,"warmwater":50,"debiet":13.1,"druk":2.15,"comp_pct":28,"el_verm":0.7,"th_verm":4.2,"e_verw":50551,"e_ww":11012,"uren_comp":10658,"uren_elek":109,"cop":6.0},{"datum":"29-03-2026","tijd":"11:25","kamer":23.1,"buiten":9.9,"aanvoer":27.4,"retour":21.2,"boiler":27.5,"warmwater":45.1,"debiet":0,"druk":2.06,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":50671,"e_ww":11024,"uren_comp":10690,"uren_elek":109,"cop":null},{"datum":"02-04-2026","tijd":"08:19","kamer":22.6,"buiten":9.4,"aanvoer":30.8,"retour":26.6,"boiler":30.8,"warmwater":45.3,"debiet":12.9,"druk":2.15,"comp_pct":15,"el_verm":0.5,"th_verm":4.1,"e_verw":50888,"e_ww":11062,"uren_comp":10747,"uren_elek":109,"cop":8.2},{"datum":"03-04-2026","tijd":"08:05","kamer":22.3,"buiten":5.7,"aanvoer":31.3,"retour":27.5,"boiler":31.4,"warmwater":49.3,"debiet":12.8,"druk":2.16,"comp_pct":22,"el_verm":0.5,"th_verm":3.5,"e_verw":50954,"e_ww":11074,"uren_comp":10763,"uren_elek":109,"cop":7.0},{"datum":"03-04-2026","tijd":"16:42","kamer":23,"buiten":11.5,"aanvoer":42.8,"retour":27.1,"boiler":42.7,"warmwater":50.7,"debiet":0,"druk":2.11,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":50954,"e_ww":11074,"uren_comp":10769,"uren_elek":109,"cop":null},{"datum":"05-04-2026","tijd":"14:21","kamer":23.6,"buiten":13.9,"aanvoer":27.3,"retour":23,"boiler":27.3,"warmwater":50.2,"debiet":0,"druk":2.12,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":51046,"e_ww":11094,"uren_comp":10790,"uren_elek":109,"cop":null},{"datum":"05-04-2026","tijd":"14:37","kamer":23.6,"buiten":13.9,"aanvoer":27.3,"retour":23,"boiler":27.3,"warmwater":50.1,"debiet":0,"druk":2.12,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":51046,"e_ww":11094,"uren_comp":10790,"uren_elek":109,"cop":null},{"datum":"07-04-2026","tijd":"08:03","kamer":22.3,"buiten":4.8,"aanvoer":31,"retour":26.9,"boiler":30.9,"warmwater":63,"debiet":13.2,"druk":2.18,"comp_pct":24,"el_verm":0.5,"th_verm":3.8,"e_verw":51137,"e_ww":11122,"uren_comp":10815,"uren_elek":109,"cop":7.6},{"datum":"09-04-2026","tijd":"10:54","kamer":23.3,"buiten":14.6,"aanvoer":26.8,"retour":17.9,"boiler":26.8,"warmwater":48.1,"debiet":0,"druk":2.08,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":51198,"e_ww":11128,"uren_comp":10833,"uren_elek":109,"cop":null},{"datum":"09-04-2026","tijd":"10:58","kamer":23.4,"buiten":14.9,"aanvoer":26.8,"retour":18,"boiler":26.8,"warmwater":48.1,"debiet":0,"druk":2.08,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":51198,"e_ww":11128,"uren_comp":10833,"uren_elek":109,"cop":null},{"datum":"10-04-2026","tijd":"07:28","kamer":22.4,"buiten":7.7,"aanvoer":29.6,"retour":25.6,"boiler":29.6,"warmwater":49.6,"debiet":13.4,"druk":2.16,"comp_pct":15,"el_verm":0.5,"th_verm":4,"e_verw":51224,"e_ww":11135,"uren_comp":10838,"uren_elek":109,"cop":8.0},{"datum":"10-04-2026","tijd":"08:00","kamer":22.5,"buiten":7.7,"aanvoer":29.8,"retour":25.8,"boiler":29.8,"warmwater":49.5,"debiet":12.8,"druk":2.16,"comp_pct":15,"el_verm":0.5,"th_verm":3.8,"e_verw":51224,"e_ww":11135,"uren_comp":10838,"uren_elek":109,"cop":7.6},{"datum":"13-04-2026","tijd":"07:28","kamer":22.3,"buiten":5.7,"aanvoer":25.8,"retour":25.9,"boiler":25.7,"warmwater":50.9,"debiet":19,"druk":2.2,"comp_pct":20,"el_verm":0,"th_verm":0,"e_verw":51351,"e_ww":11163,"uren_comp":10873,"uren_elek":110,"cop":null},{"datum":"13-04-2026","tijd":"07:36","kamer":22.3,"buiten":5.8,"aanvoer":24.9,"retour":25.2,"boiler":30.4,"warmwater":50.9,"debiet":19.8,"druk":2.2,"comp_pct":56,"el_verm":1.7,"th_verm":7.3,"e_verw":51351,"e_ww":11163,"uren_comp":10873,"uren_elek":110,"cop":4.29},{"datum":"13-04-2026","tijd":"08:00","kamer":22.4,"buiten":6.4,"aanvoer":29.4,"retour":25.8,"boiler":29.5,"warmwater":50.8,"debiet":12.8,"druk":2.16,"comp_pct":15,"el_verm":0.5,"th_verm":3.7,"e_verw":51351,"e_ww":11163,"uren_comp":10873,"uren_elek":110,"cop":7.4},{"datum":"14-04-2026","tijd":"08:00","kamer":22.6,"buiten":4.9,"aanvoer":30.1,"retour":26.4,"boiler":30.1,"warmwater":62.6,"debiet":12.8,"druk":2.18,"comp_pct":15,"el_verm":0.5,"th_verm":3.5,"e_verw":51395,"e_ww":11181,"uren_comp":10887,"uren_elek":110,"cop":7.0},{"datum":"15-04-2026","tijd":"08:43","kamer":22.5,"buiten":11.3,"aanvoer":29.8,"retour":25.7,"boiler":29.7,"warmwater":50.4,"debiet":13.2,"druk":2.15,"comp_pct":15,"el_verm":0.5,"th_verm":4.1,"e_verw":51422,"e_ww":11181,"uren_comp":10894,"uren_elek":110,"cop":8.2},{"datum":"16-04-2026","tijd":"07:21","kamer":22.4,"buiten":9.6,"aanvoer":28.5,"retour":24.7,"boiler":28.6,"warmwater":49.8,"debiet":12.9,"druk":2.16,"comp_pct":15,"el_verm":0.4,"th_verm":3.9,"e_verw":51446,"e_ww":11192,"uren_comp":10899,"uren_elek":110,"cop":9.75},{"datum":"17-04-2026","tijd":"08:07","kamer":22.6,"buiten":10.6,"aanvoer":29.4,"retour":25.3,"boiler":29.4,"warmwater":50.5,"debiet":13.1,"druk":2.16,"comp_pct":15,"el_verm":0.4,"th_verm":4,"e_verw":51467,"e_ww":11198,"uren_comp":10906,"uren_elek":110,"cop":10.0},{"datum":"18-04-2026","tijd":"10:30","kamer":23.3,"buiten":14.8,"aanvoer":26.8,"retour":20.5,"boiler":26.8,"warmwater":48.9,"debiet":0,"druk":2.09,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":51486,"e_ww":11211,"uren_comp":10911,"uren_elek":110,"cop":null},{"datum":"21-04-2026","tijd":"08:31","kamer":22.5,"buiten":8,"aanvoer":30.7,"retour":26.9,"boiler":30.8,"warmwater":49.2,"debiet":13.2,"druk":2.14,"comp_pct":15,"el_verm":0.5,"th_verm":3.7,"e_verw":51606,"e_ww":11229,"uren_comp":10941,"uren_elek":110,"cop":7.4},{"datum":"23-04-2026","tijd":"08:23","kamer":22.4,"buiten":6.7,"aanvoer":30.9,"retour":26.9,"boiler":30.9,"warmwater":49.3,"debiet":12.8,"druk":2.14,"comp_pct":15,"el_verm":0.5,"th_verm":3.8,"e_verw":51686,"e_ww":11242,"uren_comp":10962,"uren_elek":110,"cop":7.6},{"datum":"23-04-2026","tijd":"08:28","kamer":22.4,"buiten":6.8,"aanvoer":30.9,"retour":26.9,"boiler":30.7,"warmwater":49.3,"debiet":12.9,"druk":2.14,"comp_pct":15,"el_verm":0.5,"th_verm":3.8,"e_verw":51686,"e_ww":11242,"uren_comp":10962,"uren_elek":110,"cop":7.6},{"datum":"24-04-2026","tijd":"06:58","kamer":22.5,"buiten":5.8,"aanvoer":30.2,"retour":26.4,"boiler":30.4,"warmwater":49.8,"debiet":13.1,"druk":2.15,"comp_pct":15,"el_verm":0.5,"th_verm":3.7,"e_verw":51728,"e_ww":11248,"uren_comp":10969,"uren_elek":110,"cop":7.4},{"datum":"27-04-2026","tijd":"11:41","kamer":23.5,"buiten":14.4,"aanvoer":26.7,"retour":22.9,"boiler":26.7,"warmwater":48.8,"debiet":0,"druk":2.07,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":51843,"e_ww":11266,"uren_comp":11001,"uren_elek":110,"cop":null},{"datum":"02-05-2026","tijd":"10:55","kamer":23.1,"buiten":17.4,"aanvoer":50.8,"retour":30.2,"boiler":50.9,"warmwater":50.7,"debiet":0,"druk":2.08,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":51973,"e_ww":11293,"uren_comp":11029,"uren_elek":110,"cop":null},{"datum":"07-05-2026","tijd":"09:08","kamer":23,"buiten":14.7,"aanvoer":30.8,"retour":26.6,"boiler":30.8,"warmwater":49.2,"debiet":13.1,"druk":2.16,"comp_pct":15,"el_verm":0.5,"th_verm":4.1,"e_verw":52073,"e_ww":11317,"uren_comp":11059,"uren_elek":110,"cop":8.2},{"datum":"13-05-2026","tijd":"07:33","kamer":22.7,"buiten":9.2,"aanvoer":30.6,"retour":26.7,"boiler":30.7,"warmwater":48.2,"debiet":13,"druk":2.17,"comp_pct":15,"el_verm":0.5,"th_verm":4,"e_verw":52257,"e_ww":11350,"uren_comp":11107,"uren_elek":110,"cop":8.0},{"datum":"13-05-2026","tijd":"08:00","kamer":22.8,"buiten":10.1,"aanvoer":30.8,"retour":26.8,"boiler":31,"warmwater":48,"debiet":13.2,"druk":2.17,"comp_pct":15,"el_verm":0.5,"th_verm":4,"e_verw":52257,"e_ww":11350,"uren_comp":11107,"uren_elek":110,"cop":8.0},{"datum":"15-05-2026","tijd":"07:42","kamer":22.9,"buiten":8.1,"aanvoer":30.8,"retour":26.9,"boiler":30.8,"warmwater":46.2,"debiet":13.1,"druk":2.16,"comp_pct":15,"el_verm":0.5,"th_verm":4,"e_verw":52346,"e_ww":11363,"uren_comp":11130,"uren_elek":110,"cop":8.0},{"datum":"17-05-2026","tijd":"11:28","kamer":23.3,"buiten":15.3,"aanvoer":36.5,"retour":26.4,"boiler":36.5,"warmwater":50.2,"debiet":0,"druk":2.11,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52438,"e_ww":11375,"uren_comp":11155,"uren_elek":110,"cop":null},{"datum":"19-05-2026","tijd":"08:00","kamer":23,"buiten":12,"aanvoer":30.7,"retour":26.6,"boiler":30.7,"warmwater":62.7,"debiet":13.2,"druk":2.2,"comp_pct":15,"el_verm":0.5,"th_verm":4,"e_verw":52481,"e_ww":11398,"uren_comp":11168,"uren_elek":110,"cop":8.0},{"datum":"19-05-2026","tijd":"08:46","kamer":23.1,"buiten":13.4,"aanvoer":27.3,"retour":17.6,"boiler":27.3,"warmwater":62.4,"debiet":0,"druk":2.12,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52481,"e_ww":11398,"uren_comp":11168,"uren_elek":110,"cop":null},{"datum":"20-05-2026","tijd":"07:15","kamer":22.8,"buiten":13.9,"aanvoer":29.5,"retour":25.8,"boiler":29.5,"warmwater":48.8,"debiet":13.2,"druk":2.17,"comp_pct":15,"el_verm":0.4,"th_verm":3.9,"e_verw":52502,"e_ww":11398,"uren_comp":11172,"uren_elek":110,"cop":9.75},{"datum":"21-05-2026","tijd":"07:46","kamer":23,"buiten":14.6,"aanvoer":27.2,"retour":18.1,"boiler":27.2,"warmwater":45.6,"debiet":0,"druk":2.1,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52520,"e_ww":11403,"uren_comp":11174,"uren_elek":110,"cop":null},{"datum":"22-05-2026","tijd":"08:00","kamer":23.1,"buiten":16.4,"aanvoer":43.3,"retour":28.5,"boiler":43.3,"warmwater":50.8,"debiet":0,"druk":2.07,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52520,"e_ww":11409,"uren_comp":11175,"uren_elek":110,"cop":null},{"datum":"26-05-2026","tijd":"08:00","kamer":25.8,"buiten":21.2,"aanvoer":29.8,"retour":23.9,"boiler":29.8,"warmwater":60.3,"debiet":0,"druk":2.14,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52521,"e_ww":11455,"uren_comp":11179,"uren_elek":110,"cop":null},{"datum":"27-05-2026","tijd":"08:03","kamer":24.2,"buiten":17.2,"aanvoer":28.7,"retour":19.8,"boiler":28.7,"warmwater":47.1,"debiet":0,"druk":2.14,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52521,"e_ww":11455,"uren_comp":11179,"uren_elek":110,"cop":null},{"datum":"28-05-2026","tijd":"15:57","kamer":25.2,"buiten":24.5,"aanvoer":27.3,"retour":24.9,"boiler":27.3,"warmwater":48.9,"debiet":0,"druk":2.11,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52521,"e_ww":11460,"uren_comp":11180,"uren_elek":110,"cop":null},{"datum":"28-05-2026","tijd":"16:02","kamer":25.2,"buiten":24.6,"aanvoer":27.3,"retour":24.9,"boiler":27.3,"warmwater":48.9,"debiet":0,"druk":2.11,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52521,"e_ww":11460,"uren_comp":11180,"uren_elek":110,"cop":null},{"datum":"29-05-2026","tijd":"08:00","kamer":24.4,"buiten":20.8,"aanvoer":31.4,"retour":25.1,"boiler":31.4,"warmwater":50.1,"debiet":0,"druk":2.12,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52521,"e_ww":11465,"uren_comp":11181,"uren_elek":110,"cop":null},{"datum":"31-05-2026","tijd":"14:39","kamer":25.3,"buiten":25.7,"aanvoer":44.5,"retour":40.3,"boiler":44.8,"warmwater":40.1,"debiet":28,"druk":2.16,"comp_pct":56,"el_verm":1.7,"th_verm":10.9,"e_verw":52522,"e_ww":11477,"uren_comp":11182,"uren_elek":110,"cop":6.41},{"datum":"01-06-2026","tijd":"07:10","kamer":23.2,"buiten":16.4,"aanvoer":27.2,"retour":19.8,"boiler":27.2,"warmwater":48,"debiet":0,"druk":2.12,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52522,"e_ww":11484,"uren_comp":11182,"uren_elek":110,"cop":null},{"datum":"01-06-2026","tijd":"08:00","kamer":23.4,"buiten":18.2,"aanvoer":27,"retour":19.7,"boiler":27,"warmwater":47.9,"debiet":0,"druk":2.13,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52522,"e_ww":11484,"uren_comp":11182,"uren_elek":110,"cop":null},{"datum":"02-06-2026","tijd":"08:59","kamer":23.6,"buiten":20.1,"aanvoer":29.7,"retour":22.9,"boiler":29.7,"warmwater":62.7,"debiet":0,"druk":2.18,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52522,"e_ww":11499,"uren_comp":11184,"uren_elek":110,"cop":null},{"datum":"02-06-2026","tijd":"13:59","kamer":24.3,"buiten":24.1,"aanvoer":28.7,"retour":21.9,"boiler":28.7,"warmwater":61,"debiet":0,"druk":2.18,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52522,"e_ww":11499,"uren_comp":11184,"uren_elek":110,"cop":null},{"datum":"03-06-2026","tijd":"08:41","kamer":23.1,"buiten":17.6,"aanvoer":26.5,"retour":18.6,"boiler":26.5,"warmwater":48.3,"debiet":0,"druk":2.12,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52522,"e_ww":11499,"uren_comp":11184,"uren_elek":110,"cop":null},{"datum":"05-06-2026","tijd":"07:21","kamer":22.7,"buiten":16,"aanvoer":30.8,"retour":23.8,"boiler":30.8,"warmwater":50,"debiet":0,"druk":2.12,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52522,"e_ww":11511,"uren_comp":11185,"uren_elek":110,"cop":null},{"datum":"05-06-2026","tijd":"08:00","kamer":22.8,"buiten":17,"aanvoer":30,"retour":23.4,"boiler":30.1,"warmwater":49.9,"debiet":0,"druk":2.13,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52522,"e_ww":11511,"uren_comp":11185,"uren_elek":110,"cop":null},{"datum":"08-06-2026","tijd":"07:11","kamer":22.7,"buiten":16.1,"aanvoer":50,"retour":28.4,"boiler":50,"warmwater":50.9,"debiet":0,"druk":2.09,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52542,"e_ww":11526,"uren_comp":11192,"uren_elek":110,"cop":null},{"datum":"08-06-2026","tijd":"08:00","kamer":22.8,"buiten":17.4,"aanvoer":44.1,"retour":24.1,"boiler":44.1,"warmwater":50.8,"debiet":0,"druk":2.09,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52542,"e_ww":11532,"uren_comp":11192,"uren_elek":110,"cop":null},{"datum":"17-07-2026","tijd":"09:12","kamer":null,"buiten":null,"aanvoer":null,"retour":null,"boiler":null,"warmwater":null,"debiet":null,"druk":null,"comp_pct":null,"el_verm":null,"th_verm":null,"e_verw":null,"e_ww":null,"uren_comp":null,"uren_elek":null,"cop":null},{"datum":"17-07-2026","tijd":"09:14","kamer":25.3,"buiten":22.7,"aanvoer":54.8,"retour":50.6,"boiler":54.9,"warmwater":48.7,"debiet":28.8,"druk":2.19,"comp_pct":49,"el_verm":1.9,"th_verm":9.6,"e_verw":52636,"e_ww":11775,"uren_comp":11236,"uren_elek":111,"cop":5.05},{"datum":"17-07-2026","tijd":"09:20","kamer":25.4,"buiten":22.8,"aanvoer":51.2,"retour":51.8,"boiler":53.7,"warmwater":50.1,"debiet":25.9,"druk":2.26,"comp_pct":0,"el_verm":0,"th_verm":1.5,"e_verw":52636,"e_ww":11775,"uren_comp":11237,"uren_elek":111,"cop":null},{"datum":"17-07-2026","tijd":"09:23","kamer":25.4,"buiten":22.9,"aanvoer":50.7,"retour":30.4,"boiler":50.7,"warmwater":50.7,"debiet":0,"druk":2.12,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52636,"e_ww":11775,"uren_comp":11237,"uren_elek":111,"cop":null},{"datum":"17-07-2026","tijd":"09:30","kamer":25.4,"buiten":22.7,"aanvoer":50,"retour":28.7,"boiler":50,"warmwater":50.8,"debiet":0,"druk":2.12,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52636,"e_ww":11775,"uren_comp":11237,"uren_elek":111,"cop":null},{"datum":"17-07-2026","tijd":"09:33","kamer":25.4,"buiten":22.5,"aanvoer":49.5,"retour":28.5,"boiler":49.4,"warmwater":50.9,"debiet":0,"druk":2.12,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52636,"e_ww":11775,"uren_comp":11237,"uren_elek":111,"cop":null},{"datum":"17-07-2026","tijd":"09:36","kamer":25.4,"buiten":22.6,"aanvoer":49.1,"retour":28.6,"boiler":49,"warmwater":50.9,"debiet":0,"druk":2.12,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52636,"e_ww":11775,"uren_comp":11237,"uren_elek":111,"cop":null},{"datum":"19-07-2026","tijd":"12:57","kamer":23.5,"buiten":19.8,"aanvoer":41.7,"retour":30.1,"boiler":41.6,"warmwater":50.7,"debiet":0,"druk":2.1,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52637,"e_ww":11785,"uren_comp":11238,"uren_elek":111,"cop":null},{"datum":"27-07-2026","tijd":"12:17","kamer":25.3,"buiten":22.9,"aanvoer":33.8,"retour":28.4,"boiler":33.8,"warmwater":50.3,"debiet":0,"druk":2.12,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52637,"e_ww":11818,"uren_comp":11241,"uren_elek":111,"cop":null},{"datum":"30-07-2026","tijd":"16:18","kamer":28.3,"buiten":24.8,"aanvoer":29.2,"retour":27.5,"boiler":29.2,"warmwater":47.1,"debiet":0,"druk":2.16,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52638,"e_ww":11.84,"uren_comp":11243,"uren_elek":111,"cop":null},{"datum":"03-08-2026","tijd":"08:02","kamer":24.6,"buiten":20.7,"aanvoer":46.2,"retour":29.2,"boiler":46.1,"warmwater":50.8,"debiet":0,"druk":2.11,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52638,"e_ww":11856,"uren_comp":11245,"uren_elek":111,"cop":null},{"datum":"04-08-2026","tijd":"07:00","kamer":26.2,"buiten":20.4,"aanvoer":28.5,"retour":25.6,"boiler":28.5,"warmwater":63.4,"debiet":0,"druk":2.18,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52638,"e_ww":11872,"uren_comp":11246,"uren_elek":111,"cop":null},{"datum":"04-08-2026","tijd":"08:00","kamer":26.3,"buiten":22.3,"aanvoer":28.6,"retour":25.3,"boiler":28.5,"warmwater":63,"debiet":0,"druk":2.17,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52638,"e_ww":11872,"uren_comp":11246,"uren_elek":111,"cop":null},{"datum":"05-08-2026","tijd":"08:00","kamer":26.9,"buiten":22.8,"aanvoer":28.3,"retour":23.5,"boiler":28.3,"warmwater":50.1,"debiet":0,"druk":2.16,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52638,"e_ww":11872,"uren_comp":11246,"uren_elek":111,"cop":null},{"datum":"06-08-2026","tijd":"07:51","kamer":25.4,"buiten":18.7,"aanvoer":29.8,"retour":23.7,"boiler":29.8,"warmwater":50.2,"debiet":0,"druk":2.14,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52638,"e_ww":11877,"uren_comp":11247,"uren_elek":111,"cop":null},{"datum":"06-08-2026","tijd":"08:00","kamer":25.4,"buiten":19,"aanvoer":29.8,"retour":23.6,"boiler":29.8,"warmwater":50.2,"debiet":0,"druk":2.14,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52638,"e_ww":11877,"uren_comp":11247,"uren_elek":111,"cop":null},{"datum":"18-08-2026","tijd":"09:10","kamer":23.5,"buiten":17.7,"aanvoer":27.2,"retour":19.3,"boiler":27.2,"warmwater":46.2,"debiet":0,"druk":2.13,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52641,"e_ww":11.93,"uren_comp":11252,"uren_elek":111,"cop":null},{"datum":"18-08-2026","tijd":"09:15","kamer":23.5,"buiten":17.8,"aanvoer":27.2,"retour":19.3,"boiler":27.2,"warmwater":46.2,"debiet":0,"druk":2.13,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52641,"e_ww":11.93,"uren_comp":11252,"uren_elek":111,"cop":null},{"datum":"19-08-2026","tijd":"08:00","kamer":23.6,"buiten":17.5,"aanvoer":26.8,"retour":20.8,"boiler":26.8,"warmwater":46.6,"debiet":0,"druk":2.13,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52641,"e_ww":11935,"uren_comp":11253,"uren_elek":111,"cop":null},{"datum":"21-08-2026","tijd":"08:02","kamer":23,"buiten":15.3,"aanvoer":25.7,"retour":18.1,"boiler":25.7,"warmwater":46.9,"debiet":0,"druk":2.12,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52641,"e_ww":11945,"uren_comp":11254,"uren_elek":111,"cop":null},{"datum":"21-08-2026","tijd":"08:16","kamer":23,"buiten":15.8,"aanvoer":25.7,"retour":18,"boiler":25.7,"warmwater":46.9,"debiet":0,"druk":2.12,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52641,"e_ww":11945,"uren_comp":11254,"uren_elek":111,"cop":null},{"datum":"24-08-2026","tijd":"07:47","kamer":23.1,"buiten":14.5,"aanvoer":26.1,"retour":21.8,"boiler":26.1,"warmwater":47.1,"debiet":0,"druk":2.07,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52649,"e_ww":11963,"uren_comp":11.26,"uren_elek":111,"cop":null},{"datum":"24-08-2026","tijd":"07:50","kamer":23.1,"buiten":14.5,"aanvoer":26.1,"retour":21.9,"boiler":26.1,"warmwater":47.1,"debiet":0,"druk":2.07,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52649,"e_ww":11963,"uren_comp":11.26,"uren_elek":111,"cop":null},{"datum":"24-08-2026","tijd":"08:00","kamer":23.1,"buiten":14.8,"aanvoer":26.1,"retour":22.2,"boiler":26.1,"warmwater":47,"debiet":0,"druk":2.07,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52649,"e_ww":11963,"uren_comp":11.26,"uren_elek":111,"cop":null},{"datum":"24-08-2026","tijd":"08:29","kamer":23.1,"buiten":15.7,"aanvoer":26,"retour":22.8,"boiler":26,"warmwater":47,"debiet":0,"druk":2.07,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52649,"e_ww":11963,"uren_comp":11260,"uren_elek":111,"cop":null},{"datum":"25-08-2026","tijd":"08:00","kamer":23.1,"buiten":14.4,"aanvoer":26.8,"retour":20.9,"boiler":26.8,"warmwater":63.1,"debiet":0,"druk":2.13,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52662,"e_ww":11976,"uren_comp":11262,"uren_elek":111,"cop":null},{"datum":"27-08-2026","tijd":"13:34","kamer":24.8,"buiten":23.8,"aanvoer":48.1,"retour":43.7,"boiler":48.6,"warmwater":42.5,"debiet":28.2,"druk":2.15,"comp_pct":55,"el_verm":1.9,"th_verm":11.3,"e_verw":52662,"e_ww":11976,"uren_comp":11262,"uren_elek":111,"cop":5.95},{"datum":"27-08-2026","tijd":"13:40","kamer":24.8,"buiten":23.9,"aanvoer":51.2,"retour":46.5,"boiler":51.1,"warmwater":44.7,"debiet":28.2,"druk":2.15,"comp_pct":55,"el_verm":2,"th_verm":10.7,"e_verw":52662,"e_ww":11976,"uren_comp":11262,"uren_elek":111,"cop":5.35},{"datum":"28-08-2026","tijd":"07:58","kamer":25.2,"buiten":19.5,"aanvoer":27.1,"retour":22.6,"boiler":27,"warmwater":47.3,"debiet":0,"druk":2.14,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52662,"e_ww":11981,"uren_comp":11262,"uren_elek":111,"cop":null},{"datum":"30-08-2026","tijd":"15:26","kamer":24.9,"buiten":23.5,"aanvoer":31.8,"retour":28.2,"boiler":31.8,"warmwater":50,"debiet":0,"druk":2.14,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52662,"e_ww":11993,"uren_comp":11264,"uren_elek":111,"cop":null},{"datum":"31-08-2026","tijd":"07:30","kamer":23.8,"buiten":17,"aanvoer":27.7,"retour":20,"boiler":27.7,"warmwater":45.5,"debiet":0,"druk":2.14,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52662,"e_ww":11998,"uren_comp":11264,"uren_elek":111,"cop":null},{"datum":"31-08-2026","tijd":"08:00","kamer":23.8,"buiten":17.4,"aanvoer":27.6,"retour":19.8,"boiler":27.6,"warmwater":45.4,"debiet":0,"druk":2.14,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52662,"e_ww":11998,"uren_comp":11264,"uren_elek":111,"cop":null},{"datum":"01-09-2026","tijd":"08:00","kamer":23.1,"buiten":16.5,"aanvoer":25.9,"retour":18.6,"boiler":25.9,"warmwater":45.8,"debiet":0,"druk":2.11,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52662,"e_ww":12003,"uren_comp":11264,"uren_elek":111,"cop":null},{"datum":"02-09-2026","tijd":"07:40","kamer":23.1,"buiten":16.1,"aanvoer":26.2,"retour":18.9,"boiler":26.2,"warmwater":47,"debiet":0,"druk":2.11,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52662,"e_ww":12008,"uren_comp":11265,"uren_elek":111,"cop":null},{"datum":"02-09-2026","tijd":"08:00","kamer":23.1,"buiten":16.3,"aanvoer":26.2,"retour":18.9,"boiler":26.2,"warmwater":46.9,"debiet":0,"druk":2.11,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52662,"e_ww":12008,"uren_comp":11265,"uren_elek":111,"cop":null},{"datum":"03-09-2026","tijd":"08:39","kamer":23.4,"buiten":19.9,"aanvoer":25,"retour":23.6,"boiler":25,"warmwater":47.5,"debiet":0,"druk":2.1,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52663,"e_ww":12013,"uren_comp":11265,"uren_elek":111,"cop":null},{"datum":"03-09-2026","tijd":"08:43","kamer":23.5,"buiten":20,"aanvoer":25,"retour":23.5,"boiler":25.1,"warmwater":47.5,"debiet":0,"druk":2.11,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52663,"e_ww":12013,"uren_comp":11265,"uren_elek":111,"cop":null},{"datum":"03-09-2026","tijd":"15:25","kamer":24.5,"buiten":24,"aanvoer":25.8,"retour":23.2,"boiler":25.8,"warmwater":45.1,"debiet":0,"druk":2.1,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52663,"e_ww":12013,"uren_comp":11265,"uren_elek":111,"cop":null},{"datum":"04-09-2026","tijd":"07:21","kamer":24.4,"buiten":21,"aanvoer":25.8,"retour":23.5,"boiler":25.8,"warmwater":47.9,"debiet":0,"druk":2.11,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52663,"e_ww":12018,"uren_comp":11266,"uren_elek":111,"cop":null},{"datum":"04-09-2026","tijd":"08:00","kamer":24.2,"buiten":21.3,"aanvoer":25.8,"retour":23.4,"boiler":25.8,"warmwater":47.8,"debiet":0,"druk":2.11,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52663,"e_ww":12018,"uren_comp":11266,"uren_elek":111,"cop":null},{"datum":"07-09-2026","tijd":"07:37","kamer":23.3,"buiten":16.7,"aanvoer":26.7,"retour":20.2,"boiler":26.7,"warmwater":45.6,"debiet":0,"druk":2.11,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52680,"e_ww":12034,"uren_comp":11272,"uren_elek":111,"cop":null},{"datum":"07-09-2026","tijd":"08:00","kamer":23.3,"buiten":16.9,"aanvoer":26.6,"retour":20,"boiler":26.6,"warmwater":45.5,"debiet":0,"druk":2.12,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52680,"e_ww":12034,"uren_comp":11272,"uren_elek":111,"cop":null},{"datum":"08-09-2026","tijd":"17:26","kamer":24.3,"buiten":18.2,"aanvoer":27.3,"retour":19.9,"boiler":27.3,"warmwater":60,"debiet":0,"druk":2.16,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52681,"e_ww":12049,"uren_comp":11273,"uren_elek":111,"cop":null},{"datum":"10-09-2026","tijd":"07:54","kamer":22.7,"buiten":11.1,"aanvoer":29.2,"retour":25.5,"boiler":29.4,"warmwater":45.3,"debiet":12.9,"druk":2.16,"comp_pct":15,"el_verm":0.4,"th_verm":3.9,"e_verw":52684,"e_ww":12049,"uren_comp":11277,"uren_elek":111,"cop":9.75},{"datum":"10-09-2026","tijd":"08:00","kamer":22.8,"buiten":11.3,"aanvoer":29.4,"retour":25.6,"boiler":29.4,"warmwater":45.3,"debiet":13.2,"druk":2.16,"comp_pct":15,"el_verm":0.4,"th_verm":4,"e_verw":52684,"e_ww":12049,"uren_comp":11277,"uren_elek":111,"cop":10.0},{"datum":"11-09-2026","tijd":"07:30","kamer":22.6,"buiten":15.3,"aanvoer":25.3,"retour":17.8,"boiler":25.3,"warmwater":46.7,"debiet":0,"druk":2.11,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52708,"e_ww":12054,"uren_comp":11280,"uren_elek":111,"cop":null},{"datum":"11-09-2026","tijd":"08:00","kamer":22.5,"buiten":15.2,"aanvoer":25.2,"retour":17.6,"boiler":25.2,"warmwater":46.6,"debiet":0,"druk":2.11,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52708,"e_ww":12054,"uren_comp":11280,"uren_elek":111,"cop":null},{"datum":"13-09-2026","tijd":"17:50","kamer":24.4,"buiten":20,"aanvoer":32.6,"retour":27.9,"boiler":32.5,"warmwater":50.1,"debiet":0,"druk":2.12,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52721,"e_ww":12066,"uren_comp":11284,"uren_elek":111,"cop":null},{"datum":"14-09-2026","tijd":"08:00","kamer":22.9,"buiten":13.1,"aanvoer":26.2,"retour":17.4,"boiler":26.2,"warmwater":46.4,"debiet":0,"druk":2.11,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52722,"e_ww":12071,"uren_comp":11284,"uren_elek":111,"cop":null},{"datum":"15-09-2026","tijd":"08:00","kamer":23.3,"buiten":19.1,"aanvoer":27.3,"retour":23.5,"boiler":27.3,"warmwater":62.5,"debiet":0,"druk":2.14,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52722,"e_ww":12086,"uren_comp":11286,"uren_elek":111,"cop":null},{"datum":"16-09-2026","tijd":"08:02","kamer":23.2,"buiten":15.8,"aanvoer":26.2,"retour":17.8,"boiler":26.2,"warmwater":51.2,"debiet":0,"druk":2.13,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52722,"e_ww":12086,"uren_comp":11286,"uren_elek":111,"cop":null},{"datum":"17-09-2026","tijd":"08:24","kamer":22.8,"buiten":16.3,"aanvoer":28.7,"retour":24.8,"boiler":28.8,"warmwater":50,"debiet":12.9,"druk":2.17,"comp_pct":15,"el_verm":0.4,"th_verm":4.1,"e_verw":52722,"e_ww":12092,"uren_comp":11288,"uren_elek":111,"cop":10.25},{"datum":"17-09-2026","tijd":"08:25","kamer":22.8,"buiten":16.3,"aanvoer":28.8,"retour":24.8,"boiler":28.8,"warmwater":50,"debiet":12.9,"druk":2.17,"comp_pct":15,"el_verm":0.4,"th_verm":4.1,"e_verw":52722,"e_ww":12092,"uren_comp":11288,"uren_elek":111,"cop":10.25},{"datum":"18-09-2026","tijd":"07:04","kamer":22.6,"buiten":15.2,"aanvoer":28.4,"retour":24.6,"boiler":28.5,"warmwater":49.2,"debiet":12.8,"druk":2.18,"comp_pct":15,"el_verm":0.4,"th_verm":3.9,"e_verw":52735,"e_ww":12097,"uren_comp":11291,"uren_elek":111,"cop":9.75},{"datum":"18-09-2026","tijd":"08:00","kamer":22.8,"buiten":15.1,"aanvoer":28.8,"retour":25.1,"boiler":28.8,"warmwater":49,"debiet":12.8,"druk":2.17,"comp_pct":15,"el_verm":0.4,"th_verm":3.9,"e_verw":52735,"e_ww":12097,"uren_comp":11292,"uren_elek":111,"cop":9.75},{"datum":"20-09-2026","tijd":"13:26","kamer":23.8,"buiten":18.2,"aanvoer":34,"retour":27.7,"boiler":34,"warmwater":50.2,"debiet":0,"druk":2.11,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52749,"e_ww":12111,"uren_comp":11295,"uren_elek":111,"cop":null},{"datum":"20-09-2026","tijd":"13:36","kamer":23.9,"buiten":18.4,"aanvoer":33.7,"retour":27.5,"boiler":33.7,"warmwater":50.2,"debiet":0,"druk":2.11,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":52749,"e_ww":12111,"uren_comp":11295,"uren_elek":111,"cop":null},{"datum":"19-10-2026","tijd":"10:47","kamer":23.1,"buiten":12.8,"aanvoer":27.4,"retour":23,"boiler":27.4,"warmwater":45.2,"debiet":0,"druk":2.06,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":53171,"e_ww":12283,"uren_comp":11416,"uren_elek":111,"cop":null},{"datum":"20-10-2026","tijd":"08:00","kamer":22.5,"buiten":6,"aanvoer":41,"retour":38.7,"boiler":41.1,"warmwater":42,"debiet":28,"druk":2.12,"comp_pct":39,"el_verm":1.2,"th_verm":5.6,"e_verw":53218,"e_ww":12288,"uren_comp":11426,"uren_elek":111,"cop":4.67},{"datum":"21-10-2026","tijd":"08:05","kamer":23.1,"buiten":10.2,"aanvoer":27.3,"retour":22.7,"boiler":27.3,"warmwater":45.5,"debiet":0,"druk":2.08,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":53272,"e_ww":12294,"uren_comp":11440,"uren_elek":111,"cop":null},{"datum":"22-10-2026","tijd":"08:27","kamer":22.7,"buiten":9.7,"aanvoer":31.9,"retour":26.9,"boiler":32,"warmwater":50.8,"debiet":22.1,"druk":2.21,"comp_pct":45,"el_verm":1.5,"th_verm":8.6,"e_verw":53309,"e_ww":12299,"uren_comp":11450,"uren_elek":111,"cop":5.73},{"datum":"22-10-2026","tijd":"15:54","kamer":23.4,"buiten":12.5,"aanvoer":27.2,"retour":22.3,"boiler":27.1,"warmwater":49.6,"debiet":0,"druk":2.1,"comp_pct":0,"el_verm":0,"th_verm":0,"e_verw":53309,"e_ww":12299,"uren_comp":11455,"uren_elek":111,"cop":null},{"datum":"23-10-2026","tijd":"08:00","kamer":22.7,"buiten":11.3,"aanvoer":30.8,"retour":26.8,"boiler":30.8,"warmwater":49.5,"debiet":12.8,"druk":2.16,"comp_pct":15,"el_verm":0.5,"th_verm":4,"e_verw":53353,"e_ww":12311,"uren_comp":11462,"uren_elek":111,"cop":8.0},{"datum":"24-10-2026","tijd":"08:42","kamer":22.5,"buiten":10.1,"aanvoer":30.4,"retour":26.5,"boiler":30.5,"warmwater":49.3,"debiet":13.2,"druk":2.17,"comp_pct":15,"el_verm":0.5,"th_verm":3.9,"e_verw":53392,"e_ww":12316,"uren_comp":11473,"uren_elek":111,"cop":7.8},{"datum":"24-10-2026","tijd":"09:35","kamer":22.7,"buiten":10.4,"aanvoer":30.7,"retour":26.7,"boiler":30.6,"warmwater":49.2,"debiet":13.9,"druk":2.17,"comp_pct":15,"el_verm":0.5,"th_verm":4.1,"e_verw":53392,"e_ww":12316,"uren_comp":11474,"uren_elek":111,"cop":8.2}];
+
+// Herbereken COP
+RAW_DATA.forEach(r => {
+  if (r.el_verm && r.th_verm && r.el_verm > 0.1)
+    r.cop = Math.round(r.th_verm / r.el_verm * 100) / 100;
+  else r.cop = null;
+});
+</script>
+
+<!-- ── HTML ───────────────────────────────────────────────────────────────── -->
+<div class="header">
+  <div class="header-inner">
+    <div>
+      <h1>🌡 Wolf Warmtepomp</h1>
+      <div class="header-sub" id="header-sub">Performance Dashboard</div>
+    </div>
+    <button class="refresh-btn" onclick="refreshData()" id="refreshBtn" aria-label="Data verversen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+      </svg>
+      Verversen
+    </button>
+  </div>
+</div>
+
+<div class="page">
+  <!-- Periode -->
+  <div class="periode-bar">
+    <div class="dot"></div>
+    <span id="periode-text">Laden…</span>
+  </div>
+
+  <!-- KPI tegels -->
+  <div class="kpi-grid" id="kpi-grid">
+    <div class="kpi" style="--kpi-color:var(--accent-2)">
+      <div class="kpi-label">Kamertemperatuur</div>
+      <div class="kpi-value" id="kpi-kamer">—</div>
+      <div class="kpi-sub">actueel binnen</div>
+    </div>
+    <div class="kpi" style="--kpi-color:var(--s2)">
+      <div class="kpi-label">Buitentemperatuur</div>
+      <div class="kpi-value" id="kpi-buiten">—</div>
+      <div class="kpi-sub">actueel buiten</div>
+    </div>
+    <div class="kpi" style="--kpi-color:var(--s3)">
+      <div class="kpi-label">COP gemiddeld</div>
+      <div class="kpi-value" id="kpi-cop">—</div>
+      <div class="kpi-sub">prestatiefactor</div>
+    </div>
+    <div class="kpi" style="--kpi-color:var(--s4)">
+      <div class="kpi-label">Compressoruren</div>
+      <div class="kpi-value" id="kpi-uren">—</div>
+      <div class="kpi-sub">lifetime totaal</div>
+    </div>
+    <div class="kpi" style="--kpi-color:var(--s5)">
+      <div class="kpi-label">Aanvoertemperatuur</div>
+      <div class="kpi-value" id="kpi-aanvoer">—</div>
+      <div class="kpi-sub">cv water</div>
+    </div>
+    <div class="kpi" style="--kpi-color:var(--s8)">
+      <div class="kpi-label">Warmwater</div>
+      <div class="kpi-value" id="kpi-ww">—</div>
+      <div class="kpi-sub">boilertemperatuur</div>
+    </div>
+    <div class="kpi" style="--kpi-color:var(--s6)">
+      <div class="kpi-label">Energie verwarming</div>
+      <div class="kpi-value" id="kpi-everw">—</div>
+      <div class="kpi-sub">totaal geleverd</div>
+    </div>
+    <div class="kpi" style="--kpi-color:var(--s7)">
+      <div class="kpi-label">Energie warmwater</div>
+      <div class="kpi-value" id="kpi-eww">—</div>
+      <div class="kpi-sub">totaal geleverd</div>
+    </div>
+  </div>
+
+  <!-- Tab navigatie -->
+  <div class="tab-nav" role="tablist" aria-label="Grafiekweergave">
+    <button class="tab-btn active" onclick="showTab('temperaturen')" data-tab="temperaturen">Temperaturen</button>
+    <button class="tab-btn" onclick="showTab('cop')" data-tab="cop">COP prestatie</button>
+    <button class="tab-btn" onclick="showTab('vermogen')" data-tab="vermogen">Vermogen (kW)</button>
+    <button class="tab-btn" onclick="showTab('energie')" data-tab="energie">Energiemeter</button>
+    <button class="tab-btn" onclick="showTab('tabel')" data-tab="tabel">Tabel</button>
+  </div>
+
+  <!-- TAB: Temperaturen -->
+  <div class="section-panel active" id="tab-temperaturen">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">Temperaturen over tijd</div>
+        <div class="chart-meta" id="temp-meta"></div>
+      </div>
+      <div class="legend" id="legend-temp"></div>
+      <div class="chart-wrap">
+        <svg class="chart" id="chart-temp" viewBox="0 0 760 240" preserveAspectRatio="xMinYMid meet"></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: COP -->
+  <div class="section-panel" id="tab-cop">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">COP per meting (actieve metingen)</div>
+        <div class="chart-meta" id="cop-meta"></div>
+      </div>
+      <div class="legend" id="legend-cop"></div>
+      <div class="chart-wrap">
+        <svg class="chart" id="chart-cop" viewBox="0 0 760 240" preserveAspectRatio="xMinYMid meet"></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Vermogen -->
+  <div class="section-panel" id="tab-vermogen">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">Elektrisch vs. thermisch vermogen</div>
+        <div class="chart-meta" id="verm-meta"></div>
+      </div>
+      <div class="legend" id="legend-verm"></div>
+      <div class="chart-wrap">
+        <svg class="chart" id="chart-verm" viewBox="0 0 760 240" preserveAspectRatio="xMinYMid meet"></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Energie -->
+  <div class="section-panel" id="tab-energie">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">Cumulatieve energiemeter (kWh)</div>
+        <div class="chart-meta" id="en-meta"></div>
+      </div>
+      <div class="legend" id="legend-en"></div>
+      <div class="chart-wrap">
+        <svg class="chart" id="chart-en" viewBox="0 0 760 240" preserveAspectRatio="xMinYMid meet"></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Tabel -->
+  <div class="section-panel" id="tab-tabel">
+    <div class="chart-card" style="padding:0">
+      <div class="data-table-wrap">
+        <table id="data-table">
+          <thead>
+            <tr>
+              <th>Datum</th>
+              <th>Tijd</th>
+              <th>Kamer °C</th>
+              <th>Buiten °C</th>
+              <th>Aanvoer °C</th>
+              <th>WW °C</th>
+              <th>El. kW</th>
+              <th>Th. kW</th>
+              <th>COP</th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tooltip -->
+<div class="tooltip" id="tooltip" hidden></div>
+
+<script>
+// ── Hulpfuncties ──────────────────────────────────────────────────────────────
+function last(arr, key) {
+  for (let i = arr.length - 1; i >= 0; i--)
+    if (arr[i][key] != null) return arr[i][key];
+  return null;
+}
+function nums(arr, key) {
+  return arr.map(r => r[key]).filter(v => v != null && v !== 0);
+}
+function safe(arr, key) {
+  return arr.map(r => r[key]).filter(v => v != null);
+}
+function avg(arr) {
+  const s = arr.filter(v => v != null);
+  return s.length ? s.reduce((a,b) => a+b, 0) / s.length : 0;
+}
+function fmt1(v) { return v != null ? v.toFixed(1) : '—'; }
+function fmt2(v) { return v != null ? v.toFixed(2) : '—'; }
+function fmtKwh(v) {
+  if (v == null) return '—';
+  return v >= 1000 ? (v/1000).toFixed(1) + ' MWh' : Math.round(v) + ' kWh';
+}
+function parseDatum(s) {
+  const [d,m,y] = s.split('-');
+  return new Date(+y, +m-1, +d);
+}
+function fmtDate(s) {
+  const [d,m,y] = s.split('-');
+  return `${d}-${m}-${y.slice(2)}`;
+}
+function shortMonth(s) {
+  const months = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+  const [,m] = s.split('-');
+  return months[+m-1];
+}
+
+// ── KPI's vullen ──────────────────────────────────────────────────────────────
+function fillKPIs(data) {
+  const n = data.length;
+  const first = data[0], lastR = data[n-1];
+
+  // Periode
+  document.getElementById('periode-text').innerHTML =
+    `<strong>${fmtDate(first.datum)}</strong> t/m <strong>${fmtDate(lastR.datum)}</strong> — ${n} meetpunten`;
+  document.getElementById('header-sub').textContent =
+    `Bijgewerkt: ${fmtDate(lastR.datum)} ${lastR.tijd}`;
+
+  // Laatste waarden
+  document.getElementById('kpi-kamer').textContent  = fmt1(last(data,'kamer')) + ' °C';
+  document.getElementById('kpi-buiten').textContent = fmt1(last(data,'buiten')) + ' °C';
+  document.getElementById('kpi-aanvoer').textContent= fmt1(last(data,'aanvoer')) + ' °C';
+  document.getElementById('kpi-ww').textContent     = fmt1(last(data,'warmwater')) + ' °C';
+
+  // COP
+  const cops = data.filter(r => r.cop).map(r => r.cop);
+  const copGem = avg(cops);
+  document.getElementById('kpi-cop').textContent = copGem.toFixed(2);
+
+  // Compressoruren
+  const maxUren = Math.max(...data.filter(r=>r.uren_comp).map(r=>r.uren_comp));
+  document.getElementById('kpi-uren').textContent = Math.round(maxUren).toLocaleString('nl-NL');
+
+  // Energie
+  const ev = data.filter(r=>r.e_verw).map(r=>r.e_verw);
+  const ew = data.filter(r=>r.e_ww).map(r=>r.e_ww);
+  const evTot = ev.length ? Math.max(...ev) - Math.min(...ev) : 0;
+  const ewTot = ew.length ? Math.max(...ew) - Math.min(...ew) : 0;
+  document.getElementById('kpi-everw').textContent = fmtKwh(evTot);
+  document.getElementById('kpi-eww').textContent   = fmtKwh(ewTot);
+}
+
+// ── SVG chart engine ──────────────────────────────────────────────────────────
+const W = 760, H = 240;
+const PAD = { top: 18, right: 16, bottom: 44, left: 46 };
+const PW = W - PAD.left - PAD.right;
+const PH = H - PAD.top - PAD.bottom;
+
+function makeScale(vals, domainMin, domainMax) {
+  return v => PAD.top + PH - (v - domainMin) / (domainMax - domainMin) * PH;
+}
+function makeXScale(n) {
+  return i => PAD.left + (i / Math.max(n-1, 1)) * PW;
+}
+
+function drawGrid(svg, yMin, yMax, nTicks) {
+  const step = (yMax - yMin) / nTicks;
+  for (let i = 0; i <= nTicks; i++) {
+    const v = yMin + step * i;
+    const y = PAD.top + PH - (v - yMin) / (yMax - yMin) * PH;
+    const line = `<line class="grid-line" x1="${PAD.left}" x2="${W - PAD.right}" y1="${y}" y2="${y}"/>`;
+    const label = `<text class="axis-label" x="${PAD.left - 5}" y="${y + 3.5}" text-anchor="end">${Number.isInteger(step) ? Math.round(v) : v.toFixed(1)}</text>`;
+    svg.insertAdjacentHTML('beforeend', line + label);
+  }
+  // Baseline
+  const baseline = `<line class="axis-line" x1="${PAD.left}" x2="${W - PAD.right}" y1="${PAD.top + PH}" y2="${PAD.top + PH}"/>`;
+  svg.insertAdjacentHTML('beforeend', baseline);
+}
+
+function drawXAxis(svg, data, maxLabels) {
+  const n = data.length;
+  const step = Math.max(1, Math.floor(n / maxLabels));
+  for (let i = 0; i < n; i += step) {
+    const x = PAD.left + (i / Math.max(n-1,1)) * PW;
+    const label = fmtDate(data[i].datum);
+    const tick = `<line class="tick-line" x1="${x}" x2="${x}" y1="${PAD.top + PH}" y2="${PAD.top + PH + 4}"/>`;
+    const lbl  = `<text class="axis-label" x="${x}" y="${PAD.top + PH + 14}" text-anchor="middle">${label}</text>`;
+    svg.insertAdjacentHTML('beforeend', tick + lbl);
+  }
+}
+
+function pathFromPoints(pts, xScale, yScale) {
+  return pts.map((p, i) => {
+    if (p == null) return null;
+    const [idx, v] = p;
+    return `${i === 0 ? 'M' : 'L'}${xScale(idx).toFixed(1)},${yScale(v).toFixed(1)}`;
+  }).filter(Boolean).join(' ');
+}
+
+function drawLine(svg, pts, color, cls='chart-line', extra='') {
+  const d = pts.map((p,i) => p == null ? null : `${i===0?'M':'L'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).filter(Boolean).join(' ');
+  if (!d) return;
+  svg.insertAdjacentHTML('beforeend', `<path class="${cls}" d="${d}" stroke="${color}" ${extra}/>`);
+}
+
+function drawDots(svg, pts, color, r=3.5) {
+  pts.forEach(p => {
+    if (!p) return;
+    svg.insertAdjacentHTML('beforeend',
+      `<circle class="chart-dot" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${r}" fill="${color}"/>`);
+  });
+}
+
+// ── Interactie: tooltip & crosshair ──────────────────────────────────────────
+function setupHover(svgEl, data, seriesDef) {
+  // Onzichtbaar overlay rect
+  svgEl.insertAdjacentHTML('beforeend',
+    `<rect class="hover-rect" x="${PAD.left}" y="${PAD.top}" width="${PW}" height="${PH}" fill="transparent" style="cursor:crosshair"/>`);
+  const crosshairEl = document.createElementNS('http://www.w3.org/2000/svg','line');
+  crosshairEl.setAttribute('class','crosshair');
+  crosshairEl.setAttribute('y1', PAD.top);
+  crosshairEl.setAttribute('y2', PAD.top + PH);
+  crosshairEl.setAttribute('display','none');
+  svgEl.appendChild(crosshairEl);
+
+  const tooltip = document.getElementById('tooltip');
+  const rect = svgEl.querySelector('.hover-rect');
+
+  function getIdx(clientX) {
+    const svgRect = svgEl.getBoundingClientRect();
+    const relX = (clientX - svgRect.left) / svgRect.width * W;
+    const t = (relX - PAD.left) / PW;
+    return Math.max(0, Math.min(data.length - 1, Math.round(t * (data.length - 1))));
+  }
+
+  function show(clientX, clientY) {
+    const i = getIdx(clientX);
+    const r = data[i];
+    const x = PAD.left + (i / Math.max(data.length-1,1)) * PW;
+    crosshairEl.setAttribute('x1', x);
+    crosshairEl.setAttribute('x2', x);
+    crosshairEl.removeAttribute('display');
+
+    let html = `<div class="tooltip-date">${r.datum} ${r.tijd}</div>`;
+    seriesDef.forEach(s => {
+      const v = r[s.key];
+      if (v == null) return;
+      html += `<div class="tooltip-row">
+        <span class="tooltip-swatch" style="background:${s.color}"></span>
+        ${s.label}
+        <span class="tooltip-val">${s.fmt ? s.fmt(v) : v.toFixed(s.dec ?? 1)} ${s.unit||''}</span>
+      </div>`;
+    });
+    tooltip.innerHTML = html;
+    tooltip.hidden = false;
+
+    const tw = 200, th = 120;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let tx = clientX + 14, ty = clientY - 20;
+    if (tx + tw > vw - 8) tx = clientX - tw - 14;
+    if (ty + th > vh - 8) ty = vh - th - 8;
+    tooltip.style.left = tx + 'px';
+    tooltip.style.top  = ty + 'px';
+  }
+
+  function hide() {
+    tooltip.hidden = true;
+    crosshairEl.setAttribute('display','none');
+  }
+
+  rect.addEventListener('mousemove', e => show(e.clientX, e.clientY));
+  rect.addEventListener('mouseleave', hide);
+  rect.addEventListener('touchstart', e => { e.preventDefault(); show(e.touches[0].clientX, e.touches[0].clientY); }, {passive:false});
+  rect.addEventListener('touchmove',  e => { e.preventDefault(); show(e.touches[0].clientX, e.touches[0].clientY); }, {passive:false});
+  rect.addEventListener('touchend', hide);
+}
+
+// ── Legenda bouwen ────────────────────────────────────────────────────────────
+function buildLegend(containerId, series, hiddenSet, onToggle) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  series.forEach((s, i) => {
+    const item = document.createElement('div');
+    item.className = 'legend-item' + (hiddenSet.has(i) ? ' hidden-series' : '');
+    item.innerHTML = s.dashed
+      ? `<span class="legend-line" style="background:${s.color};opacity:0.7;border-top:2px dashed ${s.color}"></span>`
+      : `<span class="legend-dot" style="background:${s.color}"></span>`;
+    item.insertAdjacentHTML('beforeend', `<span>${s.label}</span>`);
+    item.addEventListener('click', () => { onToggle(i); });
+    el.appendChild(item);
+  });
+}
+
+// ── CSS variabele uitlezen ────────────────────────────────────────────────────
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+// ── GRAFIEK 1: Temperaturen ───────────────────────────────────────────────────
+let hiddenTemp = new Set();
+function drawTemp(data) {
+  const series = [
+    { key:'kamer',    label:'Kamer',    color:'var(--s1)', dec:1, unit:'°C' },
+    { key:'buiten',   label:'Buiten',   color:'var(--s2)', dec:1, unit:'°C' },
+    { key:'aanvoer',  label:'Aanvoer',  color:'var(--s3)', dec:1, unit:'°C' },
+    { key:'retour',   label:'Retour',   color:'var(--s4)', dec:1, unit:'°C' },
+    { key:'warmwater',label:'Warmwater',color:'var(--s5)', dec:1, unit:'°C' },
+  ];
+  buildLegend('legend-temp', series, hiddenTemp, i => {
+    if (hiddenTemp.has(i)) hiddenTemp.delete(i); else hiddenTemp.add(i);
+    drawTemp(data);
+  });
+
+  const allVals = series.flatMap((s,i) => hiddenTemp.has(i) ? [] : data.map(r => r[s.key]).filter(v=>v!=null));
+  if (!allVals.length) return;
+  const yMin = Math.floor(Math.min(...allVals) - 2);
+  const yMax = Math.ceil(Math.max(...allVals) + 2);
+  const nTicks = 5;
+
+  const svg = document.getElementById('chart-temp');
+  svg.innerHTML = '';
+  drawGrid(svg, yMin, yMax, nTicks);
+  drawXAxis(svg, data, 8);
+
+  const yScale = makeScale(null, yMin, yMax);
+  const xScale = makeXScale(data.length);
+
+  series.forEach((s, si) => {
+    if (hiddenTemp.has(si)) return;
+    const pts = data.map((r, i) => r[s.key] != null ? [xScale(i), yScale(r[s.key])] : null);
+    drawLine(svg, pts, s.color);
+  });
+
+  document.getElementById('temp-meta').textContent =
+    `Bereik: ${yMin}–${yMax} °C`;
+
+  setupHover(svg, data, series);
+}
+
+// ── GRAFIEK 2: COP ────────────────────────────────────────────────────────────
+function drawCOP(data) {
+  const actief = data.filter(r => r.cop != null);
+  if (!actief.length) return;
+
+  const cops = actief.map(r => r.cop);
+  const copGem = avg(cops);
+  const yMin = 0;
+  const yMax = Math.ceil(Math.max(...cops) * 1.15);
+
+  const svg = document.getElementById('chart-cop');
+  svg.innerHTML = '';
+  drawGrid(svg, yMin, yMax, 5);
+  drawXAxis(svg, actief, 8);
+
+  const yScale = makeScale(null, yMin, yMax);
+  const xScale = makeXScale(actief.length);
+
+  // COP punten als bars
+  actief.forEach((r, i) => {
+    const x = xScale(i);
+    const y = yScale(r.cop);
+    const bw = Math.max(3, PW / actief.length * 0.6);
+    const barH = (PAD.top + PH) - y;
+    const fill = r.cop >= 7 ? 'var(--s3)' : r.cop >= 5 ? 'var(--s1)' : 'var(--s8)';
+    svg.insertAdjacentHTML('beforeend',
+      `<rect x="${(x - bw/2).toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${barH.toFixed(1)}" fill="${fill}" class="chart-bar" rx="2"/>`);
+  });
+
+  // Gemiddelde lijn
+  const yGem = yScale(copGem);
+  svg.insertAdjacentHTML('beforeend',
+    `<line class="avg-line" x1="${PAD.left}" x2="${W-PAD.right}" y1="${yGem.toFixed(1)}" y2="${yGem.toFixed(1)}" stroke="var(--s6)" stroke-width="2"/>
+     <text class="axis-label" x="${W-PAD.right+4}" y="${(yGem+4).toFixed(1)}" fill="var(--s6)" font-size="10" font-weight="600">⌀${copGem.toFixed(2)}</text>`);
+
+  document.getElementById('cop-meta').textContent =
+    `${actief.length} actieve metingen · gemiddeld ${copGem.toFixed(2)} · bereik ${Math.min(...cops).toFixed(2)}–${Math.max(...cops).toFixed(2)}`;
+
+  buildLegend('legend-cop', [
+    { key:'cop', label:'COP (groen ≥7, blauw ≥5, rood <5)', color:'var(--s3)' },
+    { key:'gem', label:`Gemiddeld ${copGem.toFixed(2)}`, color:'var(--s6)', dashed:true },
+  ], new Set(), () => {});
+
+  const copSeries = [{ key:'cop', label:'COP', color:'var(--s3)', dec:2 }];
+  setupHover(svg, actief, copSeries);
+}
+
+// ── GRAFIEK 3: Vermogen ───────────────────────────────────────────────────────
+let hiddenVerm = new Set();
+function drawVermogen(data) {
+  const actief = data.filter(r => r.el_verm || r.th_verm);
+  const series = [
+    { key:'th_verm', label:'Thermisch (kW)', color:'var(--s3)', dec:1, unit:'kW' },
+    { key:'el_verm', label:'Elektrisch (kW)', color:'var(--s8)', dec:1, unit:'kW' },
+  ];
+  buildLegend('legend-verm', series, hiddenVerm, i => {
+    if (hiddenVerm.has(i)) hiddenVerm.delete(i); else hiddenVerm.add(i);
+    drawVermogen(data);
+  });
+
+  const allVals = series.flatMap((s,i) => hiddenVerm.has(i) ? [] : actief.map(r=>r[s.key]).filter(v=>v!=null));
+  if (!allVals.length) return;
+  const yMin = 0;
+  const yMax = Math.ceil(Math.max(...allVals) * 1.15);
+
+  const svg = document.getElementById('chart-verm');
+  svg.innerHTML = '';
+  drawGrid(svg, yMin, yMax, 5);
+  drawXAxis(svg, actief, 8);
+
+  const yScale = makeScale(null, yMin, yMax);
+  const xScale = makeXScale(actief.length);
+
+  series.forEach((s, si) => {
+    if (hiddenVerm.has(si)) return;
+    const pts = actief.map((r, i) => r[s.key] != null ? [xScale(i), yScale(r[s.key])] : null);
+    drawLine(svg, pts, s.color);
+    const dotPts = pts.filter(p=>p);
+    if (actief.length <= 60) drawDots(svg, dotPts, s.color);
+  });
+
+  document.getElementById('verm-meta').textContent =
+    `${actief.length} metingen met actief vermogen`;
+  setupHover(svg, actief, series);
+}
+
+// ── GRAFIEK 4: Energie ────────────────────────────────────────────────────────
+let hiddenEn = new Set();
+function drawEnergie(data) {
+  const series = [
+    { key:'e_verw', label:'Verwarming (kWh)', color:'var(--s2)', dec:0, unit:'kWh' },
+    { key:'e_ww',   label:'Warm water (kWh)', color:'var(--s5)', dec:0, unit:'kWh' },
+  ];
+  buildLegend('legend-en', series, hiddenEn, i => {
+    if (hiddenEn.has(i)) hiddenEn.delete(i); else hiddenEn.add(i);
+    drawEnergie(data);
+  });
+
+  const allVals = series.flatMap((s,i) => hiddenEn.has(i) ? [] : data.map(r=>r[s.key]).filter(v=>v!=null));
+  if (!allVals.length) return;
+  const yMin = Math.floor(Math.min(...allVals) * 0.995);
+  const yMax = Math.ceil(Math.max(...allVals) * 1.005);
+
+  const svg = document.getElementById('chart-en');
+  svg.innerHTML = '';
+  drawGrid(svg, yMin, yMax, 5);
+  drawXAxis(svg, data, 8);
+
+  const yScale = makeScale(null, yMin, yMax);
+  const xScale = makeXScale(data.length);
+
+  series.forEach((s, si) => {
+    if (hiddenEn.has(si)) return;
+    const pts = data.map((r,i) => r[s.key] != null ? [xScale(i), yScale(r[s.key])] : null);
+    drawLine(svg, pts, s.color);
+  });
+
+  document.getElementById('en-meta').textContent =
+    `Cumulatieve teller · oplopende waarden`;
+  setupHover(svg, data, series);
+}
+
+// ── Data tabel ────────────────────────────────────────────────────────────────
+function fillTable(data) {
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML = '';
+  const sorted = [...data].reverse();
+  sorted.forEach(r => {
+    const copClass = r.cop == null ? '' : r.cop >= 7 ? 'cop-good' : r.cop >= 5 ? 'cop-ok' : 'cop-low';
+    tbody.insertAdjacentHTML('beforeend', `
+      <tr>
+        <td>${r.datum}</td>
+        <td>${r.tijd}</td>
+        <td>${fmt1(r.kamer)}</td>
+        <td>${fmt1(r.buiten)}</td>
+        <td>${fmt1(r.aanvoer)}</td>
+        <td>${fmt1(r.warmwater)}</td>
+        <td>${r.el_verm != null ? r.el_verm.toFixed(1) : '—'}</td>
+        <td>${r.th_verm != null ? r.th_verm.toFixed(1) : '—'}</td>
+        <td class="${copClass}">${r.cop != null ? r.cop.toFixed(2) : '—'}</td>
+      </tr>`);
+  });
+}
+
+// ── Tab navigatie ─────────────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.section-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === name);
+  });
+  document.getElementById('tab-' + name).classList.add('active');
+
+  // Teken opnieuw na tonen (voor correct breedte)
+  setTimeout(() => {
+    if (name === 'temperaturen') drawTemp(RAW_DATA);
+    if (name === 'cop')          drawCOP(RAW_DATA);
+    if (name === 'vermogen')     drawVermogen(RAW_DATA);
+    if (name === 'energie')      drawEnergie(RAW_DATA);
+  }, 10);
+}
+
+// ── Verversen ─────────────────────────────────────────────────────────────────
+function refreshData() {
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('spinning');
+  btn.disabled = true;
+  // Simuleer verversing (data zit ingebakken in de pagina)
+  setTimeout(() => {
+    initAll();
+    btn.classList.remove('spinning');
+    btn.disabled = false;
+  }, 600);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+function initAll() {
+  fillKPIs(RAW_DATA);
+  drawTemp(RAW_DATA);
+  fillTable(RAW_DATA);
+}
+
+document.addEventListener('DOMContentLoaded', initAll);
+</script>
